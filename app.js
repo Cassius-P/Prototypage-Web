@@ -32,34 +32,30 @@ app.get('/*', (req, res)=>{
     res.redirect('/');
 })
 app.post('/login', urlencodedParser, function (req, res) {
-    //let userInfo = getUserInfo(req.body.email)
-    //Test
-    let userInfo = {
-        state: true,
-        user:{
-            email: "admin@admin.com",
-            password: "$2y$10$dcYXmNA2a3Tup9MKZJodd.6TtLRxXqu4k/eTGe9ohGFFemPUAJSV6",
-            id:"1"
-        }
-    }
-    console.log("beforeVerify")
+    let userInfo = getUserInfo(req.body.email)
+
     let verif = false;
-    bcrypt.compare(req.body.password, userInfo.user.password, (error,state) => {
-        console.log(state, error)
-        if (error != null){
-            verif = false
-        }
+    if(userInfo != false){
+        bcrypt.compare(req.body.password, userInfo.user.password, (error,state) => {
+            console.log(state, error)
+            if (error != null){
+                verif = false
+            }
+            verif = state;
 
-        verif = state;
+        })
+    }
 
-        if(verif){
-            console.log("Set item")
-            ls.setItem(prefix+"user", userInfo)
-            console.log(ls.getItem(prefix+"user"))
-        }
-        console.log(req.body)
-        res.redirect('/')
-    })
+
+
+    if(verif){
+        console.log("Set item")
+        ls.setItem(prefix+"user", JSON.stringify(userInfo))
+        console.log(ls.getItem(prefix+"user"))
+    }
+    console.log(req.body)
+    res.redirect('/')
+
 
 
 })
@@ -74,10 +70,10 @@ user != null ? ls.removeItem(prefix+"user") : console.log("Personne dans la base
 
 function dashboardOrLogin(res){
     let user = ls.getItem(prefix+"user")
-    console.log(user)
-    user == null ? res.render('login.html') : res.render('dashboard.html')
+    user = JSON.parse(user);
+    user?.user == null ? res.render('login.html') : res.render('dashboard.html')
 
-    //user != null ? ls.removeItem(prefix+"user") : console.log("Personne dans la base chef !")
+
 }
 
 function getUserInfo(email){
@@ -87,25 +83,24 @@ function getUserInfo(email){
     https.get('https://api.tomates.iswei.fr/login?email='+email, (resp) => {
         let data = '';
 
-        // A chunk of data has been received.
         resp.on('data', (chunk) => {
             data += chunk;
         });
 
-        // The whole response has been received. Print out the result.
         resp.on('end', () => {
             console.log(JSON.parse(data));
             if (JSON.parse(data).status){
-                userInfo = JSON.parse(data);
+                userInfo = data
             }
         });
 
     }).on("error", (err) => {
         console.log("Error: " + err.message);
     });
+
+    return userInfo
 }
 
 function verifyPassword(userInfo, password){
     console.log(password, userInfo.user.password)
-
 }
